@@ -19,17 +19,6 @@ class SubscriptionsServiceProvider extends ServiceProvider
     use ConsoleTools;
 
     /**
-     * The commands to be registered.
-     *
-     * @var array
-     */
-    protected $commands = [
-        MigrateCommand::class => 'command.rinvex.subscriptions.migrate',
-        PublishCommand::class => 'command.rinvex.subscriptions.publish',
-        RollbackCommand::class => 'command.rinvex.subscriptions.rollback',
-    ];
-
-    /**
      * Register the application services.
      *
      * @return void
@@ -39,16 +28,18 @@ class SubscriptionsServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(realpath(__DIR__.'/../../config/config.php'), 'rinvex.subscriptions');
 
         // Bind eloquent models to IoC container
-        $this->registerModels([
-            'rinvex.subscriptions.plan' => Plan::class,
-            'rinvex.subscriptions.plan_feature' => PlanFeature::class,
-            'rinvex.subscriptions.plan_subscription' => PlanSubscription::class,
-            'rinvex.subscriptions.plan_subscription_usage' => PlanSubscriptionUsage::class,
-        ]);
+        $this->app->bind('rinvex.subscriptions.plan', Plan::class);
+        $this->app->bind('rinvex.subscriptions.plan_feature', PlanFeature::class);
+        $this->app->bind('rinvex.subscriptions.plan_subscription', PlanSubscription::class);
+        $this->app->bind('rinvex.subscriptions.plan_subscription_usage', PlanSubscriptionUsage::class);
 
         // Register console commands
         if ($this->app->runningInConsole()) {
-            $this->commands($this->commands);
+            $this->commands([
+                MigrateCommand::class,
+                PublishCommand::class,
+                RollbackCommand::class,
+            ]);
         }
     }
 
@@ -60,8 +51,27 @@ class SubscriptionsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Publish Resources
-        $this->publishesConfig('rinvex/laravel-subscriptions');
-        $this->publishesMigrations('rinvex/laravel-subscriptions');
-        ! $this->autoloadMigrations('rinvex/laravel-subscriptions') || $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        $this->publishes([
+            __DIR__ . '/../../config/config.php' => config_path('rinvex.subscriptions.php'),
+        ], 'config');
+
+        $this->publishes([
+            __DIR__ . '/../../database/migrations' => database_path('migrations'),
+        ], 'migrations');
+
+        if ($this->autoloadMigrations('rinvex/laravel-subscriptions')) {
+            $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
+        }
+    }
+
+    /**
+     * Check if the autoload migrations option is enabled.
+     *
+     * @param string $package
+     * @return bool
+     */
+    protected function autoloadMigrations(string $package): bool
+    {
+        return config("{$package}.autoload_migrations", true);
     }
 }
