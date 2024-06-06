@@ -53,7 +53,7 @@ class SubscriptionsServiceProvider extends ServiceProvider
         // Publish Resources
         $this->publishes([
             __DIR__ . '/../../config/config.php' => config_path('rinvex.subscriptions.php'),
-        ], 'config');
+        ], 'rinvex/subscriptions::config');
 
         $this->publishes([
             __DIR__ . '/../../database/migrations' => database_path('migrations'),
